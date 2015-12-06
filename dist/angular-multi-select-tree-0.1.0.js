@@ -248,6 +248,7 @@
             scope.refreshOutputModel();
           }
         });
+
         /**
            * Checks whether any of children match the keyword.
            *
@@ -269,23 +270,58 @@
            */
         function getAllChildNodesFromNode(node, childNodes) {
           for (var i = 0; i < node.children.length; i++) {
-            childNodes.push(node.children[i]);
+            node.children[i].isFiltered = true;
             // add the childNodes from the children if available
             getAllChildNodesFromNode(node.children[i], childNodes);
           }
           return childNodes;
         }
+
+        function filterItemWithChildren(item, keyword){
+          item.isFiltered = true;
+          item.isExpanded = false;
+
+          for (var i = 0; i < item.children.length; i++) {
+            if(!filterItemWithChildren(item.children[i], keyword) && item.isFiltered) {
+              item.isFiltered = false;
+              item.isExpanded = true;
+            }
+          }
+
+          if(!item.isFiltered) {
+            return item.isFiltered;
+          }
+
+          if (item.isFiltered && item.name.toLowerCase().indexOf(keyword) !== -1) {
+            item.isFiltered = false;
+            item.isExpanded = true;
+          }
+          return item.isFiltered;
+        }
+
+        function resetItem(item) {
+          for (var i = 0; i < item.children.length; i++) {
+            resetItem(item.children[i]);
+          }
+
+          item.isFiltered = false;
+          item.isExpanded = false;
+        }
+
         scope.$watch('filterKeyword', function () {
           if (scope.filterKeyword !== undefined) {
-            angular.forEach(scope.inputModel, function (item) {
-              if (item.name.toLowerCase().indexOf(scope.filterKeyword.toLowerCase()) !== -1) {
-                item.isFiltered = false;
-              } else if (!isChildrenFiltered(item, scope.filterKeyword)) {
-                item.isFiltered = false;
-              } else {
-                item.isFiltered = true;
-              }
-            });
+            // reset filter
+            if(scope.filterKeyword.length==0) {
+              angular.forEach(scope.inputModel, function (item) {
+                resetItem(item);
+              });
+            }
+
+            if (scope.filterKeyword.length>2) {
+              angular.forEach(scope.inputModel, function (item) {
+                filterItemWithChildren(item, scope.filterKeyword.toLowerCase());
+              });
+            }
           }
         });
       },
